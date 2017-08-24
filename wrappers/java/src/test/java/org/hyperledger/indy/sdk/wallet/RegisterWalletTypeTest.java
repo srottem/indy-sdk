@@ -12,22 +12,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
-
 public class RegisterWalletTypeTest extends IndyIntegrationTest {
 
 	@Test
+	@Ignore //The wallet is already registered by the base class!
 	public void testRegisterWalletTypeWorks() throws Exception {
-		WalletTypeInmem.getInstance().clear();
 
-		assertTrue(true);
-
-		WalletTypeInmem.getInstance().clear();
+		Wallet.registerWalletType("inmem", new InMemWalletType()).get();
 	}
 
 	@Test
@@ -36,10 +32,9 @@ public class RegisterWalletTypeTest extends IndyIntegrationTest {
 		thrown.expect(ExecutionException.class);
 		thrown.expectCause(new ErrorCodeMatcher(ErrorCode.WalletTypeAlreadyRegisteredError));
 
-		Wallet.registerWalletType("inmem", WalletTypeInmem.getInstance()).get();
+		Wallet.registerWalletType("inmem", new InMemWalletType()).get();
 	}
-
-
+	
 	static Wallet wallet;
 	static String claimDef;
 	String masterSecretName = "master_secret_name";
@@ -55,16 +50,14 @@ public class RegisterWalletTypeTest extends IndyIntegrationTest {
 			"\"issuer_did\":\"%s\",\"schema_seq_no\":%d}";
 	@Rule
 	public Timeout globalTimeout = new Timeout(10, TimeUnit.MINUTES);
-
+	
 	@Test
-	@Ignore
 	public void customWalletWorkoutTest() throws Exception { 
-
+		
 		StorageUtils.cleanupStorage();
 
 		String walletName = "inmemWorkoutWallet";
-		Wallet.registerWalletType("inmem", WalletTypeInmem.getInstance());
-
+		
 		Wallet.createWallet("default", walletName, "inmem", null, null).get();
 		wallet = Wallet.openWallet(walletName, null, null).get();
 
