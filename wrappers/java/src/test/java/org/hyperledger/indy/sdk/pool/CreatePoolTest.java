@@ -17,6 +17,7 @@ public class CreatePoolTest extends IndyIntegrationTest {
 		File file = new File("testCreatePoolWorks.txn");
 		file.deleteOnExit();
 		assertTrue(file.createNewFile());
+		PoolUtils.writeTransactions(file, 1);
 
 		Pool.createPoolLedgerConfig("testCreatePoolWorks", null).get();
 	}
@@ -32,7 +33,7 @@ public class CreatePoolTest extends IndyIntegrationTest {
 
 	@Test
 	public void testCreatePoolWorksForEmptyName() throws Exception {
-		thrown.expect(new ErrorCodeMatcher(ErrorCode.CommonInvalidParam2));
+		thrown.expect(IllegalArgumentException.class);
 
 		File genesisTxnFile = PoolUtils.createGenesisTxnFile("genesis.txn");
 
