@@ -3,7 +3,6 @@ package org.hyperledger.indy.sdk.signus;
 import org.bitcoinj.core.Base58;
 import org.hyperledger.indy.sdk.IndyIntegrationTestWithSingleWallet;
 import org.hyperledger.indy.sdk.signus.SignusResults.CreateAndStoreMyDidResult;
-import org.hyperledger.indy.sdk.signus.SignusResults.ReplaceKeysStartResult;
 import org.hyperledger.indy.sdk.wallet.WalletValueNotFoundException;
 
 import static org.hamcrest.CoreMatchers.isA;
@@ -29,8 +28,8 @@ public class ReplaceKeysStartTest extends IndyIntegrationTestWithSingleWallet {
 
 	@Test
 	public void testReplaceKeysStartWorksForEmptyJson() throws Exception {
-		ReplaceKeysStartResult result = Signus.replaceKeysStart(wallet, did, "{}").get();
-		assertEquals(32, Base58.decode(result.getVerkey()).length);
+		String verkey = Signus.replaceKeysStart(wallet, did, "{}").get();
+		assertEquals(32, Base58.decode(verkey).length);
 	}
 
 	@Test
@@ -38,15 +37,14 @@ public class ReplaceKeysStartTest extends IndyIntegrationTestWithSingleWallet {
 		thrown.expect(ExecutionException.class);
 		thrown.expectCause(isA(WalletValueNotFoundException.class));
 
-		Signus.replaceKeysStart(this.wallet, DID1, "{}").get();
+		Signus.replaceKeysStart(this.wallet, DID, "{}").get();
 	}
 
 	@Test
 	public void testReplaceKeysStartWorksForSeed() throws Exception {
-		ReplaceKeysStartResult result = Signus.replaceKeysStart(this.wallet, this.did, "{\"seed\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}").get();
-		String verkey = result.getVerkey();
+		String verkey = Signus.replaceKeysStart(this.wallet, this.did, String.format("{\"seed\":\"%s\"}", MY1_SEED)).get();
 
-		assertEquals("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW", verkey);
+		assertEquals(VERKEY_MY1, verkey);
 		assertNotEquals(this.verkey, verkey);
 	}
 }

@@ -7,8 +7,6 @@
 #import <XCTest/XCTest.h>
 #import "PoolUtils.h"
 #import "TestUtils.h"
-#import <Indy/Indy.h>
-#import "NSDictionary+JSON.h"
 
 @interface LedgerDemo : XCTestCase
 
@@ -29,10 +27,10 @@
 - (void) testLedgerDemo
 {
     [TestUtils cleanupStorage];
-    NSString *myWalletName = @"my_wallet2";
-    NSString *theirWalletName = @"their_wallet3";
+    NSString *myWalletName = @"my_wallet";
+    NSString *theirWalletName = @"their_wallet";
     NSString *walletType = @"default";
-    NSString *poolName = @"ledger_demo_works";
+    NSString *poolName = @"pool_1";
     NSError *ret;
     
     // 1. Create ledger config from genesis txn file
@@ -75,7 +73,7 @@
                                                           config:nil];
     XCTAssertEqual(ret.code, Success, @"createWalletWithPoolName() failed!");
     
-    // 6. Open Their Wallet. Gets Their wallet handle
+    // 6. Open Their Wallet. Get Their wallet handle
     __block IndyHandle theirWalletHandle = 0;
     
     ret = [[WalletUtils sharedInstance] openWalletWithName:theirWalletName
@@ -87,33 +85,28 @@
     
     NSString *myDid = nil;
     NSString *myVerkey = nil;
-    NSString *myPk = nil;
-    
+
     ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:myWalletHandle
                                                                        seed:nil
                                                                    outMyDid:&myDid
-                                                                outMyVerkey:&myVerkey
-                                                                    outMyPk:&myPk];
+                                                                outMyVerkey:&myVerkey];
     XCTAssertEqual(ret.code, Success, @"createAndStoreMyDid() failed!");
     
     // 8. Create Their DID from Trustee1 seed
     NSString *theirDid = nil;
     NSString *theirVerkey = nil;
-    NSString *theirPk = nil;
-    
+
     ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:theirWalletHandle
                                                                        seed:@"000000000000000000000000Trustee1"
                                                                    outMyDid:&theirDid
-                                                                outMyVerkey:&theirVerkey
-                                                                    outMyPk:&theirPk];
+                                                                outMyVerkey:&theirVerkey];
     XCTAssertEqual(ret.code, Success, @"createAndStoreMyDid() failed!");
     
     // 9. Store Their DID
     
     NSString* theirIdentityJson = [NSString stringWithFormat: @"{\"did\":\"%@\",\
-                                                                \"pk\":\"%@\",\
                                                                 \"verkey\":\"%@\"\
-                                   }", theirDid, theirPk, theirVerkey];
+                                   }", theirDid, theirVerkey];
     
     ret = [[SignusUtils sharedInstance] storeTheirDidWithWalletHandle:myWalletHandle
                                                          identityJson:theirIdentityJson];
@@ -134,11 +127,8 @@
     // 11. Send NYM request with signing
     NSString *nymTxnResponse;
     
-//    ret = [[LedgerUtils sharedInstance] submitRequest:nymTxnRequest
-//                                       withPoolHandle:poolHandle
-//                                           resultJson:&nymTxnResponse];
     ret = [[LedgerUtils sharedInstance] signAndSubmitRequestWithPoolHandle:poolHandle
-                                                              walletHandle:myWalletHandle
+                                                              walletHandle:theirWalletHandle
                                                               submitterDid:theirDid
                                                                requestJson:nymTxnRequest
                                                            outResponseJson:&nymTxnResponse];
@@ -151,13 +141,14 @@
                                   "\"reqId\":%d,"
                                   "\"signature\": null,"
                                   "\"identifier\":\"%@\","
+                                  "\"protocolVersion\":1,"
                                   "\"operation\":{"
                                         "\"type\":\"105\","
                                         "\"dest\":\"%@\"}"
                                   "}", [getNymRequestId intValue] , myVerkey, myDid];
     
     __block NSString *getNymTxnResponseJson;
-   
+    
     ret = [[LedgerUtils sharedInstance] submitRequest:getNymTxnRequest
                                        withPoolHandle:poolHandle
                                            resultJson:&getNymTxnResponseJson];
@@ -236,34 +227,29 @@
     
     NSString *myDid = nil;
     NSString *myVerkey = nil;
-    NSString *myPk = nil;
-    
+
     ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:myWalletHandle
                                                                        seed:nil
                                                                    outMyDid:&myDid
-                                                                outMyVerkey:&myVerkey
-                                                                    outMyPk:&myPk];
+                                                                outMyVerkey:&myVerkey];
     XCTAssertEqual(ret.code, Success, @"createAndStoreMyDid() failed!");
     
     // 8. Create Their DID from Trustee1 seed
     
     NSString *theirDid = nil;
     NSString *theirVerkey = nil;
-    NSString *theirPk = nil;
-    
+
     ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:theirWalletHandle
                                                                        seed:@"000000000000000000000000Trustee1"
                                                                    outMyDid:&theirDid
-                                                                outMyVerkey:&theirVerkey
-                                                                    outMyPk:&theirPk];
+                                                                outMyVerkey:&theirVerkey];
     XCTAssertEqual(ret.code, Success, @"createAndStoreMyDid() failed!");
     
     // 9. Store Their DID
     
     NSString* theirIdentityJson = [NSString stringWithFormat: @"{\"did\":\"%@\",\
-                                   \"pk\":\"%@\",\
                                    \"verkey\":\"%@\"\
-                                   }", theirDid, theirPk, theirVerkey];
+                                   }", theirDid, theirVerkey];
     
    
     ret = [[SignusUtils sharedInstance] storeTheirDidWithWalletHandle:myWalletHandle

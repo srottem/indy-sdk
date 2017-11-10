@@ -772,7 +772,7 @@ mod medium_cases {
         fn issuer_create_and_store_claim_def_works_for_invalid_schema() {
             let (wallet_handle, _) = AnoncredsUtils::init_common_wallet();
 
-            let schema = r#"{"seqNo":1, "name":"name","version":"1.0", "keys":["name"]}"#;
+            let schema = r#"{"seqNo":1, "name":"name","version":"1.0", "attr_names":["name"]}"#;
 
             let res = AnoncredsUtils::issuer_create_claim_definition(wallet_handle, ISSUER_DID, &schema, None, false);
             assert_eq!(res.unwrap_err(), ErrorCode::CommonInvalidStructure);
@@ -782,17 +782,17 @@ mod medium_cases {
         fn issuer_create_and_store_claim_def_works_for_invalid_did() {
             let (wallet_handle, _) = AnoncredsUtils::init_common_wallet();
 
-            let schema = r#"{"seqNo":1, "data":{"name":"name","version":"1.0","keys":[]}}"#;
+            let schema = r#"{"seqNo":1, "data":{"name":"name","version":"1.0","attr_names":[]}}"#;
 
             let res = AnoncredsUtils::issuer_create_claim_definition(wallet_handle, INVALID_IDENTIFIER, &schema, None, false);
             assert_eq!(res.unwrap_err(), ErrorCode::CommonInvalidStructure);
         }
 
         #[test]
-        fn issuer_create_and_store_claim_def_works_for_empty_schema_keys() {
+        fn issuer_create_and_store_claim_def_works_for_empty_schema_attr_names() {
             let (wallet_handle, _) = AnoncredsUtils::init_common_wallet();
 
-            let schema = r#"{"seqNo":1, "data":{"name":"name","version":"1.0","keys":[]}}"#;
+            let schema = r#"{"seqNo":1, "data":{"name":"name","version":"1.0","attr_names":[]}}"#;
 
             let res = AnoncredsUtils::issuer_create_claim_definition(wallet_handle, &schema, ISSUER_DID, None, false);
             assert_eq!(res.unwrap_err(), ErrorCode::CommonInvalidStructure);
@@ -1464,7 +1464,7 @@ mod demos {
         let claim_offer_json = serde_json::to_string(&claim_offers[0]).unwrap();
 
         Command::new("python3")
-            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libsovrin_pysovrin_is_issuer.py")
+            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libindy_pyindy_is_issuer.py")
             .spawn().expect("failed to execute process");
         thread::sleep(time::Duration::from_millis(3000));
 
@@ -1587,7 +1587,7 @@ mod demos {
         let claim_def_json = AnoncredsUtils::issuer_create_claim_definition(issuer_wallet_handle, &ISSUER_DID, &schema, None, false).unwrap();
 
         Command::new("python3")
-            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libsovrin_pysovrin_is_verifier.py")
+            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libindy_pyindy_is_verifier.py")
             .spawn().expect("failed to execute process");
         thread::sleep(time::Duration::from_millis(3000));
 
@@ -1686,7 +1686,7 @@ mod demos {
         let schema = AnoncredsUtils::get_gvt_schema_json(schema_seq_no);
 
         Command::new("python3")
-            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libsovrin_pysovrin_is_prover.py")
+            .arg("/home/indy/indy-anoncreds/anoncreds/test/test_interoperability_with_libindy_pyindy_is_prover.py")
             .spawn().expect("failed to execute process");
         thread::sleep(time::Duration::from_millis(3000));
 

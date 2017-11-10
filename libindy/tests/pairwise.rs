@@ -23,8 +23,6 @@ use utils::constants::*;
 
 use indy::api::ErrorCode;
 
-pub const METADATA: &'static str = "some metadata";
-
 
 mod high_cases {
     use super::*;
@@ -38,13 +36,11 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, Some(METADATA)).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, Some(METADATA)).unwrap();
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -57,13 +53,11 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -76,11 +70,9 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::create_pairwise(wallet_handle, &their_did, DID, None).unwrap_err());
+            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, DID, None).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -93,7 +85,7 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
             assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::create_pairwise(wallet_handle, DID, &my_did, None).unwrap_err());
 
@@ -103,19 +95,16 @@ mod high_cases {
         }
 
         #[test]
-        fn indy_create_pairwise_works_for_invalid_handle() {
+        fn indy_create_pairwise_works_for_invalid_wallet_handle() {
             TestUtils::cleanup_storage();
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            let invalid_wallet_handle = wallet_handle + 1;
-            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::create_pairwise(invalid_wallet_handle, DID, &my_did, None).unwrap_err());
+            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::create_pairwise(wallet_handle + 1, DID_TRUSTEE, &my_did, None).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -132,19 +121,17 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, &their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
             let list_pairwise_json = PairwiseUtils::list_pairwise(wallet_handle).unwrap();
             let list_pairwise: Vec<String> = serde_json::from_str(&list_pairwise_json).unwrap();
 
             assert_eq!(list_pairwise.len(), 1);
-            assert!(list_pairwise.contains(&format!(r#"{{"my_did":"{}","their_did":"{}"}}"#, my_did, their_did)));
+            assert!(list_pairwise.contains(&format!(r#"{{"my_did":"{}","their_did":"{}"}}"#, my_did, DID_TRUSTEE)));
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -173,16 +160,13 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, &their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            let invalid_wallet_handle = wallet_handle + 1;
-            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::list_pairwise(invalid_wallet_handle).unwrap_err());
+            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::list_pairwise(wallet_handle + 1).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -199,15 +183,13 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            assert!(PairwiseUtils::pairwise_exists(wallet_handle, &their_did).unwrap());
+            assert!(PairwiseUtils::pairwise_exists(wallet_handle, DID_TRUSTEE).unwrap());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -221,12 +203,8 @@ mod high_cases {
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
             SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
-
-            assert!(!PairwiseUtils::pairwise_exists(wallet_handle, &their_did).unwrap());
+            assert!(!PairwiseUtils::pairwise_exists(wallet_handle, DID_TRUSTEE).unwrap());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -239,16 +217,13 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            let invalid_wallet_handle = wallet_handle + 1;
-            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::pairwise_exists(invalid_wallet_handle, &their_did).unwrap_err());
+            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::pairwise_exists(wallet_handle + 1, DID_TRUSTEE).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -265,15 +240,13 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, Some(METADATA)).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, Some(METADATA)).unwrap();
 
-            let pairwise_info_json = PairwiseUtils::get_pairwise(wallet_handle, &their_did).unwrap();
+            let pairwise_info_json = PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap();
             assert_eq!(format!(r#"{{"my_did":"{}","metadata":"{}"}}"#, my_did, METADATA), pairwise_info_json);
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
@@ -288,12 +261,8 @@ mod high_cases {
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
             SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
-
-            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::get_pairwise(wallet_handle, &their_did).unwrap_err());
+            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -306,16 +275,13 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            let invalid_wallet_handle = wallet_handle + 1;
-            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::get_pairwise(invalid_wallet_handle, &their_did).unwrap_err());
+            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::get_pairwise(wallet_handle + 1, DID_TRUSTEE).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -332,23 +298,46 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            let pairwise_info_without_metadata = PairwiseUtils::get_pairwise(wallet_handle, &their_did).unwrap();
+            let pairwise_info_without_metadata = PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap();
             assert_eq!(format!(r#"{{"my_did":"{}"}}"#, my_did), pairwise_info_without_metadata);
 
-            PairwiseUtils::set_pairwise_metadata(wallet_handle, &their_did, METADATA).unwrap();
+            PairwiseUtils::set_pairwise_metadata(wallet_handle, DID_TRUSTEE, Some(METADATA)).unwrap();
 
-            let pairwise_info_with_metadata = PairwiseUtils::get_pairwise(wallet_handle, &their_did).unwrap();
-
+            let pairwise_info_with_metadata = PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap();
             assert_ne!(pairwise_info_without_metadata, pairwise_info_with_metadata);
             assert_eq!(format!(r#"{{"my_did":"{}","metadata":"{}"}}"#, my_did, METADATA), pairwise_info_with_metadata);
+
+            WalletUtils::close_wallet(wallet_handle).unwrap();
+
+            TestUtils::cleanup_storage();
+        }
+
+        #[test]
+        fn indy_set_pairwise_metadata_works_for_reset() {
+            TestUtils::cleanup_storage();
+
+            let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
+
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
+
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
+
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, Some(METADATA)).unwrap();
+
+            let pairwise_info_with_metadata = PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap();
+            assert_eq!(format!(r#"{{"my_did":"{}","metadata":"{}"}}"#, my_did, METADATA), pairwise_info_with_metadata);
+
+            PairwiseUtils::set_pairwise_metadata(wallet_handle, DID_TRUSTEE, None).unwrap();
+
+            let pairwise_info_without_metadata = PairwiseUtils::get_pairwise(wallet_handle, DID_TRUSTEE).unwrap();
+            assert_ne!(pairwise_info_with_metadata, pairwise_info_without_metadata);
+            assert_eq!(format!(r#"{{"my_did":"{}"}}"#, my_did), pairwise_info_without_metadata);
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -362,12 +351,8 @@ mod high_cases {
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
             SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
-
-            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::set_pairwise_metadata(wallet_handle, &their_did, METADATA).unwrap_err());
+            assert_eq!(ErrorCode::WalletNotFoundError, PairwiseUtils::set_pairwise_metadata(wallet_handle, DID_TRUSTEE, Some(METADATA)).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
@@ -380,36 +365,17 @@ mod high_cases {
 
             let wallet_handle = WalletUtils::create_and_open_wallet(POOL, None).unwrap();
 
-            let (my_did, _, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
-            let (their_did, their_verkey, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY2_SEED)).unwrap();
+            let (my_did, _) = SignusUtils::create_and_store_my_did(wallet_handle, Some(MY1_SEED)).unwrap();
 
-            let identity_json = format!(r#"{{"did":"{}", "verkey":"{}"}}"#, their_did, their_verkey);
-            SignusUtils::store_their_did(wallet_handle, &identity_json).unwrap();
+            SignusUtils::store_their_did_from_parts(wallet_handle, DID_TRUSTEE, VERKEY_TRUSTEE).unwrap();
 
-            PairwiseUtils::create_pairwise(wallet_handle, &their_did, &my_did, None).unwrap();
+            PairwiseUtils::create_pairwise(wallet_handle, DID_TRUSTEE, &my_did, None).unwrap();
 
-            let invalid_wallet_handle = wallet_handle + 1;
-            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::set_pairwise_metadata(invalid_wallet_handle, &their_did, METADATA).unwrap_err());
+            assert_eq!(ErrorCode::WalletInvalidHandle, PairwiseUtils::set_pairwise_metadata(wallet_handle + 1, DID_TRUSTEE, Some(METADATA)).unwrap_err());
 
             WalletUtils::close_wallet(wallet_handle).unwrap();
 
             TestUtils::cleanup_storage();
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct PairwiseInfo {
-    pub my_did: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<String>,
-}
-
-impl PairwiseInfo {
-    pub fn new(my_did: String, metadata: Option<String>) -> PairwiseInfo {
-        PairwiseInfo {
-            my_did: my_did,
-            metadata: metadata
         }
     }
 }

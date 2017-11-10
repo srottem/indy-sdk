@@ -6,7 +6,6 @@ use commands::{Command, CommandExecutor};
 use commands::signus::SignusCommand;
 use utils::cstring::CStringUtils;
 use utils::byte_array::vec_to_pointer;
-use std::slice;
 
 use self::libc::c_char;
 
@@ -46,8 +45,7 @@ pub  extern fn indy_create_and_store_my_did(command_handle: i32,
                                             did_json: *const c_char,
                                             cb: Option<extern fn(xcommand_handle: i32, err: ErrorCode,
                                                                  did: *const c_char,
-                                                                 verkey: *const c_char,
-                                                                 pk: *const c_char)>) -> ErrorCode {
+                                                                 verkey: *const c_char)>) -> ErrorCode {
     check_useful_c_str!(did_json, ErrorCode::CommonInvalidParam3);
     check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam4);
 
@@ -56,11 +54,10 @@ pub  extern fn indy_create_and_store_my_did(command_handle: i32,
             wallet_handle,
             did_json,
             Box::new(move |result| {
-                let (err, did, verkey, pk) = result_to_err_code_3!(result, String::new(), String::new(), String::new());
+                let (err, did, verkey) = result_to_err_code_2!(result, String::new(), String::new());
                 let did = CStringUtils::string_to_cstring(did);
                 let verkey = CStringUtils::string_to_cstring(verkey);
-                let pk = CStringUtils::string_to_cstring(pk);
-                cb(command_handle, err, did.as_ptr(), verkey.as_ptr(), pk.as_ptr())
+                cb(command_handle, err, did.as_ptr(), verkey.as_ptr())
             })
         )));
 
@@ -94,8 +91,7 @@ pub  extern fn indy_replace_keys_start(command_handle: i32,
                                        did: *const c_char,
                                        identity_json: *const c_char,
                                        cb: Option<extern fn(xcommand_handle: i32, err: ErrorCode,
-                                                            verkey: *const c_char,
-                                                            pk: *const c_char)>) -> ErrorCode {
+                                                            verkey: *const c_char)>) -> ErrorCode {
     check_useful_c_str!(identity_json, ErrorCode::CommonInvalidParam3);
     check_useful_c_str!(did, ErrorCode::CommonInvalidParam4);
     check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam5);
@@ -106,10 +102,9 @@ pub  extern fn indy_replace_keys_start(command_handle: i32,
             identity_json,
             did,
             Box::new(move |result| {
-                let (err, verkey, pk) = result_to_err_code_2!(result, String::new(), String::new());
+                let (err, verkey) = result_to_err_code_1!(result, String::new());
                 let verkey = CStringUtils::string_to_cstring(verkey);
-                let pk = CStringUtils::string_to_cstring(pk);
-                cb(command_handle, err, verkey.as_ptr(), pk.as_ptr())
+                cb(command_handle, err, verkey.as_ptr())
             })
         )));
 
@@ -159,9 +154,7 @@ pub  extern fn indy_replace_keys_apply(command_handle: i32,
 /// identity_json: Identity information as json. Example:
 ///     {
 ///        "did": string, (required)
-///        "verkey": string (optional, if only pk is provided),
-///        "crypto_type": string, (optional; if not set then ed25519 curve is used;
-///               currently only 'ed25519' value is supported for this field)
+///        "verkey": string (optional, can be avoided if did is cryptonym: did == verkey),
 ///     }
 /// cb: Callback that takes command result as parameter.
 ///
@@ -187,6 +180,277 @@ pub  extern fn indy_store_their_did(command_handle: i32,
             Box::new(move |result| {
                 let err = result_to_err_code!(result);
                 cb(command_handle, err)
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+/// Returns ver key (key id) for the given DID.
+///
+/// "indy_key_for_did" call follow the idea that we resolve information about their DID from
+/// the ledger with cache in the local wallet. The "indy_open_wallet" call has freshness parameter
+/// that is used for checking the freshness of cached pool value.
+///
+/// Note if you don't want to resolve their DID info from the ledger you can use
+/// "indy_key_for_local_did" call instead that will look only to the local wallet and skip
+/// freshness checking.
+///
+/// Note that "indy_create_and_store_my_did" makes similar wallet record as "indy_create_key".
+/// As result we can use returned ver key in all generic crypto and messaging functions.
+///
+/// #Params
+/// command_handle: Command handle to map callback to caller context.
+/// wallet_handle: Wallet handle (created by open_wallet).
+/// did - The DID to resolve key.
+/// cb: Callback that takes command result as parameter.
+///
+/// #Returns
+/// Error Code
+/// cb:
+/// - xcommand_handle: Command handle to map callback to caller context.
+/// - err: Error code.
+/// - key - The DIDs ver key (key id).
+///
+/// #Errors
+/// Common*
+/// Wallet*
+/// Crypto*
+#[no_mangle]
+pub extern fn indy_key_for_did(command_handle: i32,
+                               pool_handle: i32,
+                               wallet_handle: i32,
+                               did: *const c_char,
+                               cb: Option<extern fn(xcommand_handle: i32,
+                                                    err: ErrorCode,
+                                                    key: *const c_char)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam4);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam5);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::KeyForDid(
+            pool_handle,
+            wallet_handle,
+            did,
+            Box::new(move |result| {
+                let (err, key) = result_to_err_code_1!(result, String::new());
+                let key = CStringUtils::string_to_cstring(key);
+                cb(command_handle, err, key.as_ptr())
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+/// Returns ver key (key id) for the given DID.
+///
+/// "indy_key_for_local_did" call looks data stored in the local wallet only and skips freshness
+/// checking.
+///
+/// Note if you want to get fresh data from the ledger you can use "indy_key_for_did" call
+/// instead.
+///
+/// Note that "indy_create_and_store_my_did" makes similar wallet record as "indy_create_key".
+/// As result we can use returned ver key in all generic crypto and messaging functions.
+///
+/// #Params
+/// command_handle: Command handle to map callback to caller context.
+/// wallet_handle: Wallet handle (created by open_wallet).
+/// did - The DID to resolve key.
+/// cb: Callback that takes command result as parameter.
+///
+/// #Returns
+/// Error Code
+/// cb:
+/// - xcommand_handle: Command handle to map callback to caller context.
+/// - err: Error code.
+/// - key - The DIDs ver key (key id).
+///
+/// #Errors
+/// Common*
+/// Wallet*
+/// Crypto*
+#[no_mangle]
+pub extern fn indy_key_for_local_did(command_handle: i32,
+                                     wallet_handle: i32,
+                                     did: *const c_char,
+                                     cb: Option<extern fn(xcommand_handle: i32,
+                                                          err: ErrorCode,
+                                                          key: *const c_char)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam4);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::KeyForLocalDid(
+            wallet_handle,
+            did,
+            Box::new(move |result| {
+                let (err, key) = result_to_err_code_1!(result, String::new());
+                let key = CStringUtils::string_to_cstring(key);
+                cb(command_handle, err, key.as_ptr())
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+/// Returns endpoint information for the given DID.
+///
+/// #Params
+/// command_handle: Command handle to map callback to caller context.
+/// wallet_handle: Wallet handle (created by open_wallet).
+/// did - The DID to resolve endpoint.
+/// cb: Callback that takes command result as parameter.
+///
+/// #Returns
+/// Error Code
+/// cb:
+/// - xcommand_handle: Command handle to map callback to caller context.
+/// - err: Error code.
+/// - endpoint - The DIDs endpoint.
+/// - transport_vk - The DIDs transport key (ver key, key id).
+///
+/// #Errors
+/// Common*
+/// Wallet*
+/// Crypto*
+#[no_mangle]
+pub extern fn indy_set_endpoint_for_did(command_handle: i32,
+                                        wallet_handle: i32,
+                                        did: *const c_char,
+                                        address: *const c_char,
+                                        transport_key: *const c_char,
+                                        cb: Option<extern fn(command_handle_: i32,
+                                                             err: ErrorCode)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
+    check_useful_c_str!(address, ErrorCode::CommonInvalidParam4);
+    check_useful_c_str!(transport_key, ErrorCode::CommonInvalidParam5);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam6);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::SetEndpointForDid(
+            wallet_handle,
+            did,
+            address,
+            transport_key,
+            Box::new(move |result| {
+                let err = result_to_err_code!(result);
+                cb(command_handle, err)
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+#[no_mangle]
+pub extern fn indy_get_endpoint_for_did(command_handle: i32,
+                                        wallet_handle: i32,
+                                        pool_handle: i32,
+                                        did: *const c_char,
+                                        cb: Option<extern fn(command_handle_: i32,
+                                                             err: ErrorCode,
+                                                             address: *const c_char,
+                                                             transport_vk: *const c_char)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam4);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::GetEndpointForDid(
+            wallet_handle,
+            pool_handle,
+            did,
+            Box::new(move |result| {
+                let (err, address, transport_vk) = result_to_err_code_2!(result, String::new(), String::new());
+                let address = CStringUtils::string_to_cstring(address);
+                let transport_vk = CStringUtils::string_to_cstring(transport_vk);
+                cb(command_handle, err, address.as_ptr(), transport_vk.as_ptr())
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+/// Saves/replaces the meta information for the giving DID in the wallet.
+///
+/// #Params
+/// command_handle: Command handle to map callback to caller context.
+/// wallet_handle: Wallet handle (created by open_wallet).
+/// did - the DID to store metadata.
+/// metadata - the meta information that will be store with the DID.
+/// cb: Callback that takes command result as parameter.
+///
+/// #Returns
+/// Error Code
+/// cb:
+/// - xcommand_handle: command handle to map callback to caller context.
+/// - err: Error code.
+///
+/// #Errors
+/// Common*
+/// Wallet*
+/// Crypto*
+#[no_mangle]
+pub extern fn indy_set_did_metadata(command_handle: i32,
+                                    wallet_handle: i32,
+                                    did: *const c_char,
+                                    metadata: *const c_char,
+                                    cb: Option<extern fn(command_handle_: i32,
+                                                         err: ErrorCode)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
+    check_useful_c_str_empty_accepted!(metadata, ErrorCode::CommonInvalidParam4);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam5);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::SetDidMetadata(
+            wallet_handle,
+            did,
+            metadata,
+            Box::new(move |result| {
+                let err = result_to_err_code!(result);
+                cb(command_handle, err)
+            })
+        )));
+
+    result_to_err_code!(result)
+}
+
+/// Retrieves the meta information for the giving DID in the wallet.
+///
+/// #Params
+/// command_handle: Command handle to map callback to caller context.
+/// wallet_handle: Wallet handle (created by open_wallet).
+/// did - The DID to retrieve metadata.
+/// cb: Callback that takes command result as parameter.
+///
+/// #Returns
+/// Error Code
+/// cb:
+/// - xcommand_handle: Command handle to map callback to caller context.
+/// - err: Error code.
+/// - metadata - The meta information stored with the DID; Can be null if no metadata was saved for this DID.
+///
+/// #Errors
+/// Common*
+/// Wallet*
+/// Crypto*
+#[no_mangle]
+pub extern fn indy_get_did_metadata(command_handle: i32,
+                                    wallet_handle: i32,
+                                    did: *const c_char,
+                                    cb: Option<extern fn(command_handle_: i32,
+                                                         err: ErrorCode,
+                                                         metadata: *const c_char)>) -> ErrorCode {
+    check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
+    check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam4);
+
+    let result = CommandExecutor::instance()
+        .send(Command::Signus(SignusCommand::GetDidMetadata(
+            wallet_handle,
+            did,
+            Box::new(move |result| {
+                let (err, metadata) = result_to_err_code_1!(result, String::new());
+                let metadata = CStringUtils::string_to_cstring(metadata);
+                cb(command_handle, err, metadata.as_ptr())
             })
         )));
 
@@ -220,7 +484,7 @@ pub  extern fn indy_sign(command_handle: i32,
                          cb: Option<extern fn(xcommand_handle: i32, err: ErrorCode,
                                               signature_raw: *const u8, signature_len: u32)>) -> ErrorCode {
     check_useful_c_str!(did, ErrorCode::CommonInvalidParam3);
-    check_useful_c_byte_array!(message_raw, message_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
+    check_useful_c_byte_array!(message_raw, message_len, ErrorCode::CommonInvalidParam4, ErrorCode::CommonInvalidParam5);
     check_useful_c_callback!(cb, ErrorCode::CommonInvalidParam6);
 
     let result = CommandExecutor::instance()
@@ -361,8 +625,9 @@ pub  extern fn indy_encrypt(command_handle: i32,
 /// stored in a secured wallet (see wallet_create_and_store_my_identity)
 ///
 /// #Params
-/// wallet_handle: wallet handler (created by open_wallet).
 /// command_handle: command handle to map callback to user context.
+/// wallet_handle: wallet handler (created by open_wallet).
+/// pool_handle: pool handle.
 /// my_did: encrypted DID
 /// their_did: encrypted DID that signed the message
 /// encrypted_msg_raw: a pointer to first byte of message that to be decrypted
@@ -381,6 +646,7 @@ pub  extern fn indy_encrypt(command_handle: i32,
 #[no_mangle]
 pub  extern fn indy_decrypt(command_handle: i32,
                             wallet_handle: i32,
+                            pool_handle: i32,
                             my_did: *const c_char,
                             their_did: *const c_char,
                             encrypted_msg_raw: *const u8,
@@ -398,6 +664,7 @@ pub  extern fn indy_decrypt(command_handle: i32,
     let result = CommandExecutor::instance()
         .send(Command::Signus(SignusCommand::Decrypt(
             wallet_handle,
+            pool_handle,
             my_did,
             their_did,
             encrypted_msg_raw,

@@ -14,38 +14,19 @@
 
 + (AgentUtils *)sharedInstance;
 
-- (NSError *)connectWithPoolHandle:(IndyHandle)poolHandle
-                      walletHandle:(IndyHandle)walletHandle
-                         senderDid:(NSString *)senderDid
-                       receiverDid:(NSString *)receiverDid
-                   messageCallback:(void (^)(IndyHandle connectHandle, NSString *message))messageCallback
-               outConnectionHandle:(IndyHandle *)outConnectionHandle;
+- (NSError *)prepareMsg:(NSData *)msg
+       withWalletHandle:(IndyHandle)walletHandle
+               senderVk:(NSString *)senderVk
+            recipientVk:(NSString *)recipientVk
+                 outMsg:(NSData **)outMsg;
 
-- (NSError *)listenForEndpoint:(NSString *)endpoint
-            connectionCallback:( void (^)(IndyHandle listenerHandle, IndyHandle connectionHandle))connectionCallback
-               messageCallback:(void (^)(IndyHandle connectionHandle, NSString *message))messageCallback
-             outListenerHandle:(IndyHandle *)listenerHandle;
+- (NSError *)prepareAnonymousMsg:(NSData *)msg
+                     recipientVk:(NSString *)recipientVk
+                          outMsg:(NSData **)outMsg;
 
-- (NSError *)sendWithConnectionHandler:(IndyHandle)connectionHandle
-                               message:(NSString *)message;
-
-- (NSError *)closeConnection:(IndyHandle)connectionHandle;
-
-- (NSError *)closeListener:(IndyHandle)listenerHandle;
-
-- (NSError *)addIdentityForListenerHandle:(IndyHandle)listenerHandle
-                               poolHandle:(IndyHandle)poolHandle
-                             walletHandle:(IndyHandle)walletHandle
-                                      did:(NSString *)did;
-
-- (NSError *)removeIdentity:(NSString *)did
-             listenerHandle:(IndyHandle)listenerHandle
-               walletHandle:(IndyHandle)walletHandle;
-
-- (NSError *)connectHangUpExpectedForPoolHandle:(IndyHandle)poolHandle
-                                   walletHandle:(IndyHandle)walletHandle
-                                      senderDid:(NSString *)senderDid
-                                    receiverDid:(NSString *)receiverDid
-                                      isTimeout:(BOOL *)isTimeout;
-
+- (NSError *)parseMsg:(NSData *)msg
+     withWalletHandle:(IndyHandle)walletHandle
+          recipientVk:(NSString *)recipientVk
+          outSenderVk:(NSString **)outSenderVk
+               outMsg:(NSData **)outMsg;
 @end

@@ -16,11 +16,11 @@
 #import "AnoncredsUtils.h"
 #import "NSDictionary+JSON.h"
 
-@interface RegisterWallettype : XCTestCase
+@interface RegisterWalletType : XCTestCase
 
 @end
 
-@implementation RegisterWallettype
+@implementation RegisterWalletType
 
 - (void)setUp
 {
@@ -34,11 +34,9 @@
     [super tearDown];
 }
 
-
-- (void)testKeychainWalletForAgentConnectWorksForExpiredKey
+- (void)testAgentConnectWorksForExpiredKeyInLedger
 {
     [TestUtils cleanupStorage];
-   [[IndyWallet sharedInstance] cleanupIndyKeychainWallet];
     
     NSError *ret;
     NSString *poolName = [TestUtils pool];
@@ -51,6 +49,7 @@
                                                                poolHandle:&poolHandle];
     XCTAssertEqual(ret.code, Success, @"PoolUtils::createAndOpenPoolLedgerWithPoolName() failed");
     
+    
     // register wallet type
     
     ret = [[WalletUtils sharedInstance] registerWalletType:xtype];
@@ -62,92 +61,121 @@
                                                                  handle:&listenerWallet];
     XCTAssertEqual(ret.code, Success, @"WalletUtils::createAndOpenWalletWithPoolName() failed for listener wallet");
     
-    // 3. sender wallet
-    IndyHandle senderWallet = 0;
+    // 3. trustee wallet
+    IndyHandle trusteeWallet = 0;
     ret = [[WalletUtils sharedInstance] createAndOpenWalletWithPoolName:poolName
                                                                   xtype:nil
-                                                                 handle:&senderWallet];
-    XCTAssertEqual(ret.code, Success, @"WalletUtils::createAndOpenWalletWithPoolName() failed for sender wallet");
+                                                                 handle:&trusteeWallet];
+    XCTAssertEqual(ret.code, Success, @"WalletUtils::createAndOpenWalletWithPoolName() failed for trustee wallet");
     
     // 4. obtain listener did
     
     NSString *listenerDid;
     NSString *listenerVerKey;
-    NSString *listenerPubKey;
     ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:listenerWallet
                                                                        seed:nil
                                                                    outMyDid:&listenerDid
-                                                                outMyVerkey:&listenerVerKey
-                                                                    outMyPk:&listenerPubKey];
+                                                                outMyVerkey:&listenerVerKey];
     XCTAssertEqual(ret.code, Success, @"SignusUtils::createAndStoreMyDid() failed listener did");
     
     // 5. obtain trustee did
     
-    NSString *senderDid;
-    ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:senderWallet
+    NSString *trusteeDid;
+    ret = [[SignusUtils sharedInstance] createAndStoreMyDidWithWalletHandle:trusteeWallet
                                                                        seed:[TestUtils trusteeSeed]
-                                                                   outMyDid:&senderDid
-                                                                outMyVerkey:nil
-                                                                    outMyPk:nil];
-    XCTAssertEqual(ret.code, Success, @"SignusUtils::createAndStoreMyDid() failed sender did");
+                                                                   outMyDid:&trusteeDid
+                                                                outMyVerkey:nil];
+    XCTAssertEqual(ret.code, Success, @"SignusUtils::createAndStoreMyDid() failed trustee did");
     
-    // 6. store their did from parts
+//    NSString *senderDid = [NSString stringWithString:trusteeDid];
+//    IndyHandle senderWallet = trusteeWallet;
     
-    ret = [[SignusUtils sharedInstance] storeTheirDidFromPartsWithWalletHandle:senderWallet
-                                                                      theirDid:listenerDid
-                                                                       theirPk:listenerPubKey
-                                                                   theirVerkey:listenerVerKey
-                                                                      endpoint:[TestUtils endpoint]];
-    XCTAssertEqual(ret.code, Success, @"SignusUtils::storeTheirDidFromPartsWithWalletHandle() failed");
+    // 6. Build & submit nym request
     
-    // 7. replace keys
+    NSString *listenerNymJson;
+    ret = [[LedgerUtils sharedInstance] buildNymRequestWithSubmitterDid:trusteeDid
+                                                              targetDid:listenerDid
+                                                                 verkey:listenerVerKey
+                                                                  alias:nil
+                                                                   role:nil
+                                                             outRequest:&listenerNymJson];
+    XCTAssertEqual(ret.code, Success, @"LedgerUtils::buildNymRequestWithSubmitterDid() failed");
     
-    NSString *listenerNewVerKey;
-    NSString *listenerNewPubKey;
+    ret = [[LedgerUtils sharedInstance] signAndSubmitRequestWithPoolHandle:poolHandle
+                                                              walletHandle:trusteeWallet
+                                                              submitterDid:trusteeDid
+                                                               requestJson:listenerNymJson
+                                                           outResponseJson:nil];
+    XCTAssertEqual(ret.code, Success, @"LedgerUtils::signAndSubmitRequestWithPoolHandle() failed for listenerNymJson");
     
-    ret = [[SignusUtils sharedInstance] replaceKeysForDid:listenerDid
-                                             identityJson:@"{}"
-                                             walletHandle:listenerWallet
-                                               poolHandle:poolHandle
-                                              outMyVerKey:&listenerNewVerKey
-                                                  outMyPk:&listenerNewPubKey];
-    XCTAssertEqual(ret.code, Success, @"SignusUtils::replaceKeysForDid() failed");
+    // 7. Build & submit attrib request
     
-    XCTAssertFalse([listenerVerKey isEqualToString:listenerNewVerKey], @"listener's verKey is the same!");
-    XCTAssertFalse([listenerPubKey isEqualToString:listenerNewPubKey], @"listener's pub key is the same!");
+//    NSString *invalidAttribData = [NSString stringWithFormat:@"{\"endpoint\":{\"ha\":\"%@\", \"verkey\":\"%@\"}}", [TestUtils endpoint], listenerPubKey];
+//    NSString *listenerAttribJson;
+//    ret = [[LedgerUtils sharedInstance] buildAttribRequestWithSubmitterDid:listenerDid
+//                                                                 targetDid:listenerDid
+//                                                                      hash:nil
+//                                                                       raw:invalidAttribData
+//                                                                       enc:nil
+//                                                                resultJson:&listenerAttribJson];
+//    XCTAssertEqual(ret.code, Success, @"LedgerUtils::buildAttribRequestWithSubmitterDid() failed");
+//    
+//    ret = [[LedgerUtils sharedInstance] signAndSubmitRequestWithPoolHandle:poolHandle
+//                                                              walletHandle:listenerWallet
+//                                                              submitterDid:listenerDid
+//                                                               requestJson:listenerAttribJson
+//                                                           outResponseJson:nil];
+//    XCTAssertEqual(ret.code, Success, @"LedgerUtils::signAndSubmitRequestWithPoolHandle() failed for listenerAttribJson");
+//    
+//    // 8. replace keys
+//    
+//    NSString *listenerNewVerKey;
+//    NSString *listenerNewPubKey;
+//    
+//    ret = [[SignusUtils sharedInstance] replaceKeysForDid:listenerDid
+//                                             identityJson:@"{}"
+//                                             walletHandle:listenerWallet
+//                                               poolHandle:poolHandle
+//                                              outMyVerKey:&listenerNewVerKey
+//                                                  outMyPk:&listenerNewPubKey];
+//    XCTAssertEqual(ret.code, Success, @"SignusUtils::replaceKeysForDid() failed");
+//    
+//    
+//    
+//    XCTAssertFalse([listenerVerKey isEqualToString:listenerNewVerKey], @"listener's verKey is the same!");
+//    XCTAssertFalse([listenerPubKey isEqualToString:listenerNewPubKey], @"listener's pub key is the same!");
     
-    // 8. listen
+    // 9. listen
     
-    IndyHandle listenerHandle = 0;
-    ret = [[AgentUtils sharedInstance] listenForEndpoint:[TestUtils endpoint]
-                                      connectionCallback:nil
-                                         messageCallback:nil
-                                       outListenerHandle:&listenerHandle];
-    XCTAssertEqual(ret.code, Success, @"AgentUtils::listenForEndpoint() failed");
+//    IndyHandle listenerHandle = 0;
+//    ret = [[AgentUtils sharedInstance] listenForEndpoint:[TestUtils endpoint]
+//                                      connectionCallback:nil
+//                                         messageCallback:nil
+//                                       outListenerHandle:&listenerHandle];
+//    XCTAssertEqual(ret.code, Success, @"AgentUtils::listenForEndpoint() failed");
     
     // 9. add identity
-    ret = [[AgentUtils sharedInstance] addIdentityForListenerHandle:listenerHandle
-                                                         poolHandle:poolHandle
-                                                       walletHandle:listenerWallet
-                                                                did:listenerDid];
-    XCTAssertEqual(ret.code, Success, @"AgentUtils::addIdentityForListenerHandle() failed");
+//    ret = [[AgentUtils sharedInstance] addIdentityForListenerHandle:listenerHandle
+//                                                         poolHandle:poolHandle
+//                                                       walletHandle:listenerWallet
+//                                                                did:listenerDid];
+//    XCTAssertEqual(ret.code, Success, @"AgentUtils::addIdentityForListenerHandle() failed");
     
     // 10. connect hang up expected
     
-    BOOL isTimeout = NO;
-    ret = [[AgentUtils sharedInstance] connectHangUpExpectedForPoolHandle:poolHandle
-                                                             walletHandle:senderWallet
-                                                                senderDid:senderDid
-                                                              receiverDid:listenerDid
-                                                                isTimeout:&isTimeout];
-    XCTAssertEqual(isTimeout, YES, @"AgentUtils::connectHandUpExpectedForPoolHandle() succeeded for some reason");
-    
-    [[AgentUtils sharedInstance] closeListener:listenerHandle];
+//    BOOL isTimeout = NO;
+//    ret = [[AgentUtils sharedInstance] connectHangUpExpectedForPoolHandle:poolHandle
+//                                                             walletHandle:senderWallet
+//                                                                senderDid:senderDid
+//                                                              receiverDid:listenerDid
+//                                                                isTimeout:&isTimeout];
+//    XCTAssertEqual(isTimeout, YES, @"AgentUtils::connectHandUpExpectedForPoolHandle() succeeded for some reason");
+//
+//    [[AgentUtils sharedInstance] closeListener:listenerHandle];
     [[WalletUtils sharedInstance] closeWalletWithHandle:listenerWallet];
-    [[WalletUtils sharedInstance] closeWalletWithHandle:senderWallet];
+    [[WalletUtils sharedInstance] closeWalletWithHandle:trusteeWallet];
     [[PoolUtils sharedInstance] closeHandle:poolHandle];
     
-    [[IndyWallet sharedInstance] cleanupIndyKeychainWallet];
     [TestUtils cleanupStorage];
 }
 

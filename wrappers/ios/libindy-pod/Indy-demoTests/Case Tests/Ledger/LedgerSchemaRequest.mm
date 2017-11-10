@@ -52,7 +52,7 @@
     [TestUtils cleanupStorage];
     NSString *identifier = @"some_identifier";
     NSString *data = @"{\"name\":\"name\", "\
-                       "\"keys\":\"name\"}";
+                       "\"attr_names\":\"name\"}";
     
     NSString *schemaRequest;
     NSError *ret = [[LedgerUtils sharedInstance] buildSchemaRequestWithSubmitterDid:identifier
@@ -107,8 +107,7 @@
     ret = [[SignusUtils sharedInstance] createMyDidWithWalletHandle:walletHandle
                                                           myDidJson:myDidJson
                                                            outMyDid:&myDid
-                                                        outMyVerkey:nil
-                                                            outMyPk:nil];
+                                                        outMyVerkey:nil];
     XCTAssertEqual(ret.code, Success, @"SignusUtils::createMyDidWithWalletHandle() failed");
     
     XCTAssertNotNil(myDid, @"myDid is nil!");
@@ -170,8 +169,7 @@
     ret = [[SignusUtils sharedInstance] createMyDidWithWalletHandle:walletHandle
                                                           myDidJson:myDidJson
                                                            outMyDid:&myDid
-                                                        outMyVerkey:nil
-                                                            outMyPk:nil];
+                                                        outMyVerkey:nil];
     XCTAssertEqual(ret.code, Success, @"SignusUtils::createMyDidWithWalletHandle() failed");
     
     XCTAssertNotNil(myDid, @"myDid is nil!");

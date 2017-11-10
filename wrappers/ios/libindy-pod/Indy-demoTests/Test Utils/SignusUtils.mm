@@ -92,23 +92,20 @@
                                myDidJson:(NSString *)myDidJson
                                 outMyDid:(NSString **)myDid
                              outMyVerkey:(NSString **)myVerkey
-                                 outMyPk:(NSString **)myPk
 {
    
     XCTestExpectation* completionExpectation = [[ XCTestExpectation alloc] initWithDescription: @"completion finished"];
     __block NSError *err = nil;
     __block NSString *did = nil;
     __block NSString *verKey = nil;
-    __block NSString *pk = nil;
 
     [IndySignus createAndStoreMyDid:myDidJson
                        walletHandle:walletHandle
-                         completion:^(NSError *error, NSString *blockDid, NSString *blockVerKey, NSString *blockPk)
+                         completion:^(NSError *error, NSString *blockDid, NSString *blockVerKey)
     {
         err = error;
         did = blockDid;
         verKey = blockVerKey;
-        pk = blockPk;
         
         [completionExpectation fulfill];
     }];
@@ -117,7 +114,6 @@
     
     if (myDid) { *myDid = did; }
     if (myVerkey){ *myVerkey = verKey; }
-    if (myPk) { *myPk = pk; }
     
     return err;
 }
@@ -126,25 +122,22 @@
                                             seed:(NSString *)seed
                                         outMyDid:(NSString **)myDid
                                      outMyVerkey:(NSString **)myVerkey
-                                         outMyPk:(NSString **)myPk
 {
     
     XCTestExpectation* completionExpectation = [[ XCTestExpectation alloc] initWithDescription: @"completion finished"];
     __block NSError *err = nil;
     __block NSString *did = nil;
     __block NSString *verKey = nil;
-    __block NSString *pk = nil;
     
     NSString *myDidJson = (seed) ? [NSString stringWithFormat:@"{\"seed\":\"%@\"}", seed] : @"{}";
     
     [IndySignus createAndStoreMyDid:myDidJson
                        walletHandle:walletHandle
-                         completion:^(NSError *error, NSString *blockDid, NSString *blockVerKey, NSString *blockPk)
+                         completion:^(NSError *error, NSString *blockDid, NSString *blockVerKey)
            {
                err = error;
                did = blockDid;
                verKey = blockVerKey;
-               pk = blockPk;
                
                [completionExpectation fulfill];
            }];
@@ -153,7 +146,6 @@
     
     if (myDid) { *myDid = did; }
     if (myVerkey){ *myVerkey = verKey; }
-    if (myPk) { *myPk = pk; }
     
     return err;
 }
@@ -181,7 +173,6 @@
 
 - (NSError *)storeTheirDidFromPartsWithWalletHandle:(IndyHandle)walletHandle
                                            theirDid:(NSString *)theirDid
-                                            theirPk:(NSString *)theirPk
                                         theirVerkey:(NSString *)theirVerkey
                                            endpoint:(NSString *)endpoint
 {
@@ -210,29 +201,25 @@
                        identityJson:(NSString *)identityJson
                        walletHandle:(IndyHandle)walletHandle
                         outMyVerKey:(NSString **)myVerKey
-                            outMyPk:(NSString **)myPk
 {
     XCTestExpectation* completionExpectation = [[ XCTestExpectation alloc] initWithDescription: @"completion finished"];
     __block NSError *err = nil;
     __block NSString *verkey;
-    __block NSString *pk;
     
     [IndySignus replaceKeysStartForDid:did
                           identityJson:identityJson
                           walletHandle:walletHandle
-                            completion: ^(NSError *error, NSString *blockVerkey, NSString *blockPk)
+                            completion: ^(NSError *error, NSString *blockVerkey)
      {
          err = error;
          verkey = blockVerkey;
-         pk = blockPk;
          [completionExpectation fulfill];
      }];
     
     [self waitForExpectations: @[completionExpectation] timeout:[TestUtils longTimeout]];
     
     if (myVerKey) { *myVerKey = verkey; }
-    if (myPk) { *myPk = pk; }
-    
+
     return err;
 }
 
@@ -260,18 +247,15 @@
                   walletHandle:(IndyHandle)walletHandle
                     poolHandle:(IndyHandle)poolHandle
                    outMyVerKey:(NSString **)myVerKey
-                       outMyPk:(NSString **)myPk
 {
     NSError *ret;
     
     NSString *verkey;
-    NSString *pk;
-    
+
     ret = [self replaceKeysStartForDid:did
                           identityJson:identityJson
                           walletHandle:walletHandle
-                           outMyVerKey:&verkey
-                               outMyPk:&pk];
+                           outMyVerKey:&verkey];
     
     if( ret.code != Success)
     {
@@ -304,7 +288,9 @@
     
     ret = [self replaceKeysApplyForDid:did
                           walletHandle:walletHandle];
-    
+
+    if (myVerKey) { *myVerKey = verkey; }
+
     return ret;
 }
 
@@ -365,6 +351,7 @@
 }
 
 - (NSError *)decryptWithWalletHandle:(IndyHandle)walletHandle
+                          poolHandle:(IndyHandle)poolHandle
                                myDid:(NSString *)myDid
                                  did:(NSString *)did
                     encryptedMessage:(NSData *)encryptedMessage
@@ -373,12 +360,13 @@
 {
     XCTestExpectation* completionExpectation = [[ XCTestExpectation alloc] initWithDescription: @"completion finished"];
     __block NSError *err = nil;
-    
+
     [IndySignus decryptMessage:encryptedMessage
                          myDid:myDid
                            did:did
                          nonce:nonce
                   walletHandle:walletHandle
+                    poolHandle:poolHandle
                     completion:^(NSError *error, NSData *decryptedMsg)
      {
          err = error;

@@ -40,6 +40,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      language = ""
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
          <TestableReference
@@ -52,18 +53,6 @@
                ReferencedContainer = "container:Indy-demo.xcodeproj">
             </BuildableReference>
             <SkippedTests>
-               <Test
-                  Identifier = "AgentHignCases/testAllAgentHighCasesTests">
-               </Test>
-               <Test
-                  Identifier = "AgentHignCases/testSequence">
-               </Test>
-               <Test
-                  Identifier = "AgentMediumConnect/testSequence">
-               </Test>
-               <Test
-                  Identifier = "AgentMediumSend/testAgentSendWorksForRemovedIdentity">
-               </Test>
                <Test
                   Identifier = "AnoncredsHignCases/testAnoncreds">
                </Test>
@@ -78,6 +67,9 @@
                </Test>
                <Test
                   Identifier = "PoolMediumCases/testOpenPoolLedgerWorksForInvalidConfig">
+               </Test>
+               <Test
+                  Identifier = "PoolMediumCases/testOpenPoolLedgerWorksForInvalidNodesFile">
                </Test>
                <Test
                   Identifier = "WalletHignCases/testWalletSetSeqNoWorksForPlugged">
@@ -101,6 +93,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      language = ""
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
